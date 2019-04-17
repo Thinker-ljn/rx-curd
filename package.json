@@ -1,0 +1,16 @@
+{
+  "name": "rx-curd",
+  "version": "0.1.0",
+  "description": "a curd data-layer base rxjs",
+  "main": "src/index.js",
+  "author": "Thinker-ljn",
+  "license": "MIT",
+  "dependencies": {
+    "rxjs": "^6.4.0"
+  },
+  "devDependencies": {
+    "axios": "^0.18.0",
+    "tslint": "^5.16.0",
+    "typescript": "^3.4.3"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "exclude": [ "node_modules" ],
+  "compilerOptions": {
+    "outDir": "dist",
+    "strictNullChecks": true,
+    "alwaysStrict": true,
+    "moduleResolution": "node",
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "noImplicitAny": true,
+    "lib": [ "es6", "dom" ],
+    "module": "es6",
+    "jsx": "preserve",
+    "target": "es5",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src"]
+    },
+    "plugins": [
+      { 
+        "name": "typescript-tslint-plugin", 
+        "configFile": "./tslint.json"
+      }
+    ]
+  }
+}
