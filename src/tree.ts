@@ -3,11 +3,11 @@ import DataCacheStore from './cache';
 import Root from './root';
 import Trunk from './trunk';
 import TreeErrorHandler, { ErrorHandler } from './error';
-import Http from './http'
+import Http, {BaseHttp} from './http'
 import { KeyMap } from './util';
 
 export interface TreeOptions {
-  http?: any
+  http?: BaseHttp
   cache?: boolean
   errorHandler?: ErrorHandler
 }
@@ -47,7 +47,9 @@ export default class Tree {
     const branch = new branchClass(this.trunk)
     this.branchsRegistered[name] = true
     this.branchs[name] = branch
-    this.cache && this.cache.register(branch.namespace, branch.default_)
+    if (this.cache) {
+      this.cache.register(branch.namespace, branch.default_)
+    }
     return branch
   }
 }

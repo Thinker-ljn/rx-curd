@@ -4,7 +4,7 @@ import { FruitConstructor } from './fruit';
 import Pendding, {MergeFn, PendingStatus} from './pending';
 import Root from './root'
 import Trunk, { DLTrunkSource } from './trunk'
-import { singleRemove, singleUpdate, KeyMap } from './util'
+import { KeyMap, combineLatestProject } from './util'
 import Tree from './tree';
 import { Packet } from './http';
 
@@ -72,6 +72,7 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
 
   public fill (data: Partial<T>): T {
     const originKeys = Object.keys(data)
+    // update keys
     const __uk__ = Object.keys(this.exampleData).filter(k => originKeys.indexOf(k) === -1 && !k.startsWith('__'))
     return Object.assign({}, this.exampleData, data, {__uk__})
   }
@@ -124,12 +125,7 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
 
   public initDefault (): Observable<T[]> {
     return this.init_.pipe(
-      combineLatest(this.create_, this.update_, this.delete_, (i: T[], c: T[], u: T[], r: T[]) => {
-        c.forEach(d => singleUpdate(i, d))
-        u.forEach(d => singleUpdate(i, d))
-        r.forEach(d => singleRemove(i, d))
-        return i
-      }),
+      combineLatest(this.create_, this.update_, this.delete_, combineLatestProject),
       map(data => data.filter(d => d)),
     )
   }
@@ -149,7 +145,8 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
     let from: SourceFrom = 'cache'
     if (!this.tree.cache || !this.tree.cache.match(this.namespace)) {
       from = 'http'
-      this.http.get(this.namespace).then(() => {
+
+      this.http.request({url: this.namespace}).then(() => {
         this.initailDataFlag = 'finished'
         this.execQueue()
       }, () => {
@@ -179,7 +176,10 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
     }
     const fullData = this.fill(data)
     const config = this.pending.push(fullData)
-    this.http.post(this.namespace, data, config)
+    config.data = data
+    config.method = 'post'
+    config.url = this.namespace
+    this.http.request(config)
     return this.default_
   }
 
@@ -190,7 +190,10 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
     }
     const fullData = this.fill(data)
     const config = this.pending.push(fullData, Pendding.UPDATE)
-    this.http.patch(this.namespace, data, config)
+    config.data = data
+    config.method = 'patch'
+    config.url = this.namespace
+    this.http.request(config)
     return this.default_
   }
 
@@ -201,7 +204,9 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
     }
     const fullData = this.fill(data)
     const config = this.pending.push(fullData, Pendding.DELETE)
-    this.http.delete(`${this.namespace}/${data.id}`, config)
+    config.method = 'delete'
+    config.url = `${this.namespace}/${data.id}`
+    this.http.request(config)
     return this.default_
   }
 }

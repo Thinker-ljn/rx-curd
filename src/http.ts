@@ -1,4 +1,5 @@
 import Tree from './tree';
+import Root from './root';
 
 type Method = 'get' | 'post' | 'patch' | 'delete'
 interface BasePacket {
@@ -16,19 +17,20 @@ export interface ErrorPacket extends BasePacket {
 export interface Packet<T = any> extends BasePacket {
   data: T
 }
-
-// type Response = Promise<Packet | ErrorPacket>
-// export abstract class baseHttp {
-//   public get: (api: string) => Response
-//   public post: <T>(api: string, data: T) => Response
-//   public patch: <T>(api: string, data: T) => Response
-//   public delete: <T>(api: string, data: T) => Response
-
-// } 
-export default class Http {
-  tree: Tree;
+interface RequestConfig {
+  url?: string;
+  method?: Method;
+  data: any;
+}
+export interface BaseHttp {
+  request: <C extends RequestConfig>(config: C) => any
+}
+export default class Http implements BaseHttp {
+  public tree: Tree;
+  public root: Root
   constructor (tree: Tree) {
     this.tree = tree
+    this.root = tree.root
   }
 
   private prase <T>(api: string, method: Method, data?: T) {
@@ -37,25 +39,16 @@ export default class Http {
       namespace,
       api,
       data: data || [],
-      method: method,
+      method,
       status: 200,
     }
     return packet
-  }
-
-  public get (api: string) {
-    return Promise.resolve(this.prase(api, 'get'))
   } 
-  
-  public post <T>(api: string, data: T) {
-    return Promise.resolve(this.prase(api, 'post', data))
-  }
 
-  public patch <T>(api: string, data: T) {
-    return Promise.resolve(this.prase(api, 'patch', data))
-  }
-
-  public delete <T>(api: string, data: T) {
-    return Promise.resolve(this.prase(api, 'delete', data))
+  public request <C extends RequestConfig>(config: C) {
+    const {url, method, data} = config
+    const response = Promise.resolve(this.prase(url || '', method || 'get', data))
+    response.then(res => this.root.next(res))
+    return response
   }
 }

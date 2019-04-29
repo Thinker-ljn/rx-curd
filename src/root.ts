@@ -11,7 +11,6 @@ class Root {
   constructor (tree: Tree) {
     this.tree = tree
     this.source_ = new ReplaySubject()
-    // useInterceptor(this)
   }
 
   public next (payload: Packet | ErrorPacket) {
