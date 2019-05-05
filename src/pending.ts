@@ -1,6 +1,7 @@
 import { Observable, Subject } from 'rxjs';
 import { map, merge, scan } from 'rxjs/operators';
 import { BranchData } from './branch';
+import Tree from './tree';
 
 export type PendingStatus = 'creating' | 'updating' | 'deleting'
 interface PenddingSources<T> {[key: string]: Subject<T>}
@@ -12,6 +13,7 @@ export default class Pendding<T extends BranchData> {
   public static CREATE: PendingStatus = 'creating'
   public static UPDATE: PendingStatus = 'updating'
   public static DELETE: PendingStatus = 'deleting'
+  public tree: Tree
   public uid: number = 0
   public sources: PenddingSources<T> = {
     creating_: new Subject(),
@@ -19,11 +21,16 @@ export default class Pendding<T extends BranchData> {
     deleting_: new Subject(),
   }
 
+  constructor (tree: Tree) {
+    this.tree = tree
+  }
+
   public getUniqueKey (data: T) {
     const currId = ++this.uid
-    if (!data.id) { data.id = -currId }
+    let id = this.tree.idValue(data)
+    if (!id) { id = -currId }
 
-    data.__key__ = data.id + '-' + currId
+    data.__key__ = id + '-' + currId
     return data.__key__
   }
 
@@ -52,7 +59,7 @@ export default class Pendding<T extends BranchData> {
   public mergeCreate: MergeFn<T> = (source_) => {
     const scanFn: Accumulator<T> = (acc, curr) => {
       const exist = acc[curr.__key__]
-      if (!exist || !curr.__status__ || curr.id > exist.id) {
+      if (!exist || !curr.__status__ || curr.__key__ > exist.__key__) {
         acc[curr.__key__] = curr
       }
       return acc
@@ -62,7 +69,7 @@ export default class Pendding<T extends BranchData> {
 
   public mergeUpdate: MergeFn<T> = (source_, pending_) => {
     const scanFn: Accumulator<T> = (acc, curr) => {
-      const exist = acc[curr.id]
+      const exist = acc[this.tree.idValue(curr)]
       if (!exist || !curr.__status__) {
         acc[curr.__key__] = curr
       }

@@ -4,18 +4,16 @@ import { FruitConstructor } from './fruit';
 import Pendding, {MergeFn, PendingStatus} from './pending';
 import Root from './root'
 import Trunk, { DLTrunkSource } from './trunk'
-import { KeyMap, combineLatestProject } from './util'
+import { KeyMap, genCombineFn } from './util'
 import Tree from './tree';
 import { Packet } from './http';
 
 export interface BaseData {
-  id?: number,
   __status__?: PendingStatus
   __uk__?: string[]
 }
 
 export interface BranchData extends BaseData {
-  id: number,
   __key__: string,
   updated_at?: any,
   created_at?: any
@@ -48,6 +46,7 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
   public pending: Pendding<T>
 
   public readonly abstract exampleData: T
+  public idKey: string = 'id'
   public from: SourceFrom = 'http'
   public apiFilter: RegExp
   public fruitsRegistered: KeyMap<boolean> = {}
@@ -58,13 +57,14 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
     this.root = trunk.root
     this.tree = trunk.tree
     this.trunk_ = trunk.source_
+    this.idKey = this.tree.idKey
     if (apiFilter) {
       this.apiFilter = apiFilter
     } else {
       this.apiFilter = new RegExp(`^${this.namespace}(\\/)?(\\d+)?([\\?#]|$)`)
     }
 
-    this.pending = new Pendding()
+    this.pending = new Pendding(this.tree)
     this.initSources()
 
     this.get()
@@ -85,6 +85,15 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
     return this.constructor.name.replace('Branch', '').toLowerCase()
   }
 
+  public idValue (data: Partial<T>) {
+    const key = this.idKey
+    if (!Reflect.has(data, key)) {
+      throw new Error ('')
+    }
+
+    return Reflect.get(data, key)
+  }
+
   private initSources () {
     this.raw_ = this.trunk_.pipe(
       filter((packet: Packet<T>) => packet.namespace === this.namespace && this.apiFilter.test(packet.api)),
@@ -94,7 +103,7 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
       startWith([]),
       map((data: T[]) => {
         return data.map((d: T) => {
-          d.__key__ = d.id + '-0'
+          d.__key__ = this.tree.idValue(d) + '-0'
           return d
         })
       }),
@@ -124,6 +133,7 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
   }
 
   public initDefault (): Observable<T[]> {
+    const combineLatestProject = genCombineFn(this.idKey)
     return this.init_.pipe(
       combineLatest(this.create_, this.update_, this.delete_, combineLatestProject),
       map(data => data.filter(d => d)),
@@ -205,7 +215,7 @@ export default abstract class Branch<T extends BranchData> implements BranchInte
     const fullData = this.fill(data)
     const config = this.pending.push(fullData, Pendding.DELETE)
     config.method = 'delete'
-    config.url = `${this.namespace}/${data.id}`
+    config.url = `${this.namespace}/${this.tree.idValue(data)}`
     this.http.request(config)
     return this.default_
   }

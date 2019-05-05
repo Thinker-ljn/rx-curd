@@ -20,7 +20,7 @@ export interface Packet<T = any> extends BasePacket {
 interface RequestConfig {
   url?: string;
   method?: Method;
-  data: any;
+  data?: any;
 }
 export interface BaseHttp {
   request: <C extends RequestConfig>(config: C) => any
@@ -33,7 +33,7 @@ export default class Http implements BaseHttp {
     this.root = tree.root
   }
 
-  private prase <T>(api: string, method: Method, data?: T) {
+  private parse <T>(api: string, method: Method, data?: T) {
     const namespace = api.replace(/([^\/\?]+)([\/\?\#\:]?.*)/, '$1')
     const packet: Packet = {
       namespace,
@@ -42,12 +42,20 @@ export default class Http implements BaseHttp {
       method,
       status: 200,
     }
+    
+    if (method === 'delete') {
+      const id = api.replace(/.*?\/(\d+)$/, '$1')
+      const numberId = Number(id)
+      if (!isNaN(numberId)) {
+        packet.data = {id: numberId}
+      }
+    }
     return packet
   } 
 
   public request <C extends RequestConfig>(config: C) {
     const {url, method, data} = config
-    const response = Promise.resolve(this.prase(url || '', method || 'get', data))
+    const response = Promise.resolve(this.parse(url || '', method || 'get', data))
     response.then(res => this.root.next(res))
     return response
   }

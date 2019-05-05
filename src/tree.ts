@@ -9,7 +9,8 @@ import { KeyMap } from './util';
 export interface TreeOptions {
   http?: BaseHttp
   cache?: boolean
-  errorHandler?: ErrorHandler
+  errorHandler?: ErrorHandler,
+  idKey?: string
 }
 
 export default class Tree {
@@ -19,7 +20,8 @@ export default class Tree {
   public errorHandler?: TreeErrorHandler
   private branchsRegistered: KeyMap<boolean> = {}
   private branchs: KeyMap<any> = {}
-  public http: any
+  public http: BaseHttp
+  public idKey: string = 'id'
   constructor (options?: TreeOptions) {
     this.root = new Root(this)
     this.trunk = new Trunk(this.root)
@@ -35,7 +37,19 @@ export default class Tree {
       if (options.errorHandler) {
         this.errorHandler = new TreeErrorHandler(this.trunk, options.errorHandler)
       }
+      if (options.idKey) {
+        this.idKey = options.idKey
+      }
     }
+  }
+
+  public idValue <T>(data: Partial<T>) {
+    const key = this.idKey
+    if (!Reflect.has(data, key)) {
+      return null
+    }
+
+    return Reflect.get(data, key)
   }
 
   public registerBranch <T> (branchClass: BranchConstructor<T>) {
